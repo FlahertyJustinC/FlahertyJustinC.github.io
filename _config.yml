@@ -22,7 +22,7 @@ repository               : "FlahertyJustinC/FlahertyJustinC.github.io"
 #               Additional customization can be done by editing /_includes/author-profile.html
 author:
   # Biographic information
-  avatar           : "profile.png"
+  avatar           : "images/flaherty.147.jpg"
   name             : "Justin Flaherty"
   pronouns         : "he/him"  
   bio              : "Postdoctoral scholar in astroparticle physics."
