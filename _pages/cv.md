@@ -11,9 +11,10 @@ redirect_from:
 
 Education
 ======
-* Ph.D in Version Control Theory, GitHub University, 2018 (expected)
-* M.S. in Jekyll, GitHub University, 2014
-* B.S. in GitHub, GitHub University, 2012
+* Ph.D in Astroparticle Physics, The Ohio State University, 2024
+* M.S. in Astroparticle Physics, The Ohio State University, 2020
+* M.S. in Physics - Optics and Materials, Cleveland State University, 2018
+* B.S. in Physics and Mathematics, Cleveland State University, 2016
 
 Work experience
 ======
