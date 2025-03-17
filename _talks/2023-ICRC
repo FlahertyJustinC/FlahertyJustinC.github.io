@@ -1,0 +1,12 @@
+---
+title: "Polarization Reconstruction of Askaryan Emission of Ultra-High Energy Neutrinos Using the Askaryan Radio Array"
+collection: talks
+type: "Talk"
+venue: "38th International Cosmic Ray Conference"
+date: 2023-08-02
+location: "Nagoya, Japan"
+---
+
+[More Information Here](https://confit.atlas.jp/guide/event/icrc2023/subject/NU13-04/advanced)
+
+The Askaryan Radio Array (ARA) is an ultra-high energy (> 10 PeV) neutrino detector located in the Dark Sector of the South Pole. It consists of five in-ice stations of antennas that are designed to detect radiation emitted by relativistic particle showers that are byproducts of neutrino interactions in the ice, which generate a cone of Cherenkov radiation in the radio regime (known as Askaryan radiation). The neutrino direction can be reconstructed through a combination of the direction of the Askaryan radiation, its polarization, and its frequency content. Since neutrinos are unaffected by electromagnetic forces and virtually unaffected by gravity, they travel in a straight line through the universe. This allows us to point them back towards potential sources. Through the use of radio pulser measurements, which are controlled radio emissions with a known polarization signature, we can evaluate our reconstruction techniques. Here I will show our reconstruction resolution after applying our reconstruction methods to pulser measurements.

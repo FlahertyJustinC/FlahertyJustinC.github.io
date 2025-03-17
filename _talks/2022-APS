@@ -1,0 +1,12 @@
+---
+title: "Reconstructing the Direction Ultra-High Energy Neutrinos With the Askaryan Radio Array"
+collection: talks
+type: "Talk"
+venue: "2022 APS April Meeting"
+date: 2022-04-12
+location: "New York, New York"
+---
+
+[More Information Here](https://meetings.aps.org/Meeting/APR22/Session/Y09.2)
+
+The Askaryan Radio Array (ARA) is an experiment buried beneath the ice at the South Pole that aims to detect ultra-high energy (> 10 PeV) neutrinos.  It consists of five stations of antennas that are designed to detect radiation emitted by relativistic particle showers that are byproducts of neutrino interactions within the ice, which generate a cone of Cherenkov radiation in the radio regime.  This radiation is polarized normal to the surface of the cone, which we can use to identify our location on said cone.  We can then use that to reconstruct the neutrino direction.  In this talk, I will discuss applications of these reconstruction techniques as part of a comprehensive five-station analysis.  I will also discuss how the crystal structure of the ice exhibits birefringence and how it affects our polarization measurements.
