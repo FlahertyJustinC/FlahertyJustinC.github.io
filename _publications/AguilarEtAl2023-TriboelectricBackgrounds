@@ -1,0 +1,12 @@
+---
+title: "Triboelectric backgrounds to radio-based polar ultra-high energy neutrino (UHEN) experiments"
+collection: publications
+category: manuscripts
+date: 2023-03-01
+venue: 'Astroparticle Physics'
+paperurl: 'https://doi.org/10.1016/j.astropartphys.2022.102790'
+citation: 'Aguilar, J.A. et al. Triboelectric backgrounds to radio-based polar ultra-high energy neutrino (UHEN) experiments. Astroparticle Physics, 145, 102790 (2023). https://doi.org/10.1016/j.astropartphys.2022.102790'
+---
+
+In the hopes of observing the highest-energy neutrinos (E > 1 EeV) populating the Universe, both past (RICE, AURA, ANITA) and current (RNO-G, ARIANNA, ARA and TAROGE-M) polar-sited experiments exploit the impulsive radio emission produced by neutrino interactions. In such experiments, rare single event candidates must be unambiguously identified above backgrounds. Background rejection strategies to date primarily target thermal noise fluctuations and also impulsive radio-frequency signals of anthropogenic origin. In this paper, we consider the possibility that ‘fake’ neutrino signals may also be generated naturally via the ‘triboelectric effect.’ This broadly describes any process in which force applied at a boundary layer results in displacement of surface charge, leading to the production of an electrostatic potential difference V. Wind blowing over granular surfaces such as snow can induce such a potential difference, with subsequent coronal discharge. Discharges over timescales as short as nanoseconds can then lead to radio-frequency emissions at characteristic MHz–GHz frequencies.
+Using data from various past (RICE, AURA, SATRA, ANITA) and current (RNO-G, ARIANNA and ARA) neutrino experiments, we find evidence for such backgrounds, which are generally characterized by: (a) a threshold wind velocity which likely depends on the experimental trigger criteria and layout; for the experiments considered herein, this value is typically O(10 m/s), (b) frequency spectra generally shifted to the low-end of the frequency regime to which current radio experiments are typically sensitive (100–200 MHz), (c) for the strongest background signals, an apparent preference for discharges from above-surface structures, although the presence of more isotropic, lower amplitude triboelectric discharges cannot be excluded.
