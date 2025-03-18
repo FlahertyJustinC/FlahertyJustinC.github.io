@@ -9,7 +9,7 @@
 # Basic Site Settings
 locale                   : "en-US"
 site_theme               : "default"
-title                    : "Justin Flaherty"
+title                    : "Justin Flaherty, PhD"
 title_separator          : "-"
 name                     : &name "Justin Flaherty"
 description              : &description "Astroparticle physicist with a focus on radio detection of ultrahigh energy neutrinos."
