@@ -6,28 +6,38 @@ author_profile: true
 images:
   - image_path: /images/CeremonialSouthPole.JPG
     title: Posing with the Ceremonial South Pole
+    width: 75%
   - image_path: /images/McMurdoSign.jpg
     title: Posing with the McMurdo Station Sign
+    width: 75%
   - image_path: /images/Paddington_McMurdo.jpg
     title: Paddington Bear at McMurdo Station
+    width: 75%
   - image_path: /images/SouthPoleStationSign.jpg
-    title: Posing with the South Pole Station Sign   
+    title: Posing with the South Pole Station Sign  
+    width: 75% 
   - image_path: /images/A2_excavation1.JPG
     title: Excavation of ARA Station 2
+    width: 75%
   - image_path: /images/A2_excavation2.JPG
     title: Excavation of ARA Station 2
+    width: 75%
   - image_path: /images/A2_excavation3.JPG
     title: Excavation of ARA Station 2
+    width: 75%
   - image_path: /images/A2_excavation4.JPG
     title: Excavation of ARA Station 2
+    width: 75%
   - image_path: /images/A2_hole.jpg
     title: Excavation of ARA Station 2
+    width: 75%
   - image_path: /images/Ara5.jpg
     title: Posing with ARA Station 5
+    width: 75%
   
 ---
 <ul class="photo-gallery">
   {% for image in page.images %}
-    <li><img src="{{ image.image_path }}" alt="{{ image.title}}"/></li>
+    <li><img src="{{ image.image_path }}" alt="{{ image.title}}" width="{{ image.width}}"/></li>
   {% endfor %}
 </ul>
