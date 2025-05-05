@@ -2,42 +2,85 @@
 layout: default
 title: "Gallery"
 permalink: /gallery/
-author_profile: true
-images:
-  - image_path: /images/CeremonialSouthPole.JPG
-    title: Posing with the Ceremonial South Pole
-    width: 75%
-  - image_path: /images/McMurdoSign.jpg
-    title: Posing with the McMurdo Station Sign
-    width: 75%
-  - image_path: /images/Paddington_McMurdo.jpg
-    title: Paddington Bear at McMurdo Station
-    width: 75%
-  - image_path: /images/SouthPoleStationSign.jpg
-    title: Posing with the South Pole Station Sign  
-    width: 75% 
-  - image_path: /images/A2_excavation1.JPG
-    title: Excavation of ARA Station 2
-    width: 75%
-  - image_path: /images/A2_excavation2.JPG
-    title: Excavation of ARA Station 2
-    width: 75%
-  - image_path: /images/A2_excavation3.JPG
-    title: Excavation of ARA Station 2
-    width: 75%
-  - image_path: /images/A2_excavation4.JPG
-    title: Excavation of ARA Station 2
-    width: 75%
-  - image_path: /images/A2_hole.jpg
-    title: Excavation of ARA Station 2
-    width: 75%
-  - image_path: /images/Ara5.jpg
-    title: Posing with ARA Station 5
-    width: 75%
-  
+author_profile: true  
 ---
+
+<style>
+  * {
+    box-sizing: border-box;
+  }
+  
+  body {
+    margin: 0;
+    font-family: Arial;
+  }
+  
+  .header {
+    text-align: center;
+    padding: 32px;
+  }
+  
+  .row {
+    display: -ms-flexbox; /* IE10 */
+    display: flex;
+    -ms-flex-wrap: wrap; /* IE10 */
+    flex-wrap: wrap;
+    padding: 0 4px;
+  }
+  
+  /* Create four equal columns that sits next to each other */
+  .column {
+    -ms-flex: 25%; /* IE10 */
+    flex: 25%;
+    max-width: 25%;
+    padding: 0 4px;
+  }
+  
+  .column img {
+    margin-top: 8px;
+    vertical-align: middle;
+    width: 100%;
+  }
+  
+  /* Responsive layout - makes a two column-layout instead of four columns */
+  @media screen and (max-width: 800px) {
+    .column {
+      -ms-flex: 50%;
+      flex: 50%;
+      max-width: 50%;
+    }
+  }
+  
+  /* Responsive layout - makes the two columns stack on top of each other instead of next to each other */
+  @media screen and (max-width: 600px) {
+    .column {
+      -ms-flex: 100%;
+      flex: 100%;
+      max-width: 100%;
+    }
+  }
+  </style>
+
+<!-- Photo Grid -->
 <ul class="photo-gallery">
-  {% for image in page.images %}
-    <li><img src="{{ image.image_path }}" alt="{{ image.title}}" width="{{ image.width}}"/></li>
-  {% endfor %}
+  <img src="/images/CeremonialSouthPole.JPG" style="width:100%">
+  <div class="row"> 
+    <div class="column">
+      <img src="/images/Paddington_McMurdo.jpg" style="width:100%">
+      <img src="/images/A2_hole.jpg" style="width:100%">
+      <img src="/images/Ara5.jpg" style="width:100%">
+    </div>
+    <div class="column">
+      <img src="/images/McMurdoSign.jpg" style="width:100%">
+      <img src="/images/A2_excavation2.JPG" style="width:100%">
+    </div>  
+    <div class="column">
+      <img src="/images/SouthPoleStationSign.jpg" style="width:100%">
+      <img src="/images/A2_excavation3.JPG" style="width:100%">
+    </div>
+    <div class="column">
+      <img src="/images/A2_excavation1.JPG" style="width:100%">
+      <img src="/images/A2_excavation4.JPG" style="width:100%">
+    </div>
+  </div>
 </ul>
