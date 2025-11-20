@@ -1,0 +1,4 @@
+# EmailJS is client-side (JavaScript) — no Python dependencies needed for email submissions.
+# The availability scheduler page is static and uses the EmailJS service directly.
+# This requirements.txt file is kept for reference but not used by the current setup.
+

@@ -1,0 +1,464 @@
+---
+layout: page
+title: "Availability Scheduler"
+permalink: /availability/
+---
+
+<h1>Availability Scheduler — 8-hour monitoring shifts</h1>
+
+<p>Use this page to enter your availability for 8-hour monitoring shifts between <strong>2025-12-01</strong> and <strong>2026-01-31</strong>. For each entry select the date, the shift start time (8-hour block), and the timezone in which that shift applies. You can add multiple entries, then export a CSV, copy to clipboard, or open an email populated with your schedule.</p>
+
+<div id="scheduler" class="scheduler">
+  <div id="meta" style="margin-bottom:8px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+    <div>
+      <label for="userName">Name:</label>
+      <input id="userName" type="text" placeholder="Your name" style="padding:6px;" />
+    </div>
+    <div>
+      <label for="userEmail">Email:</label>
+      <input id="userEmail" type="email" placeholder="you@example.com" style="padding:6px;" />
+    </div>
+    <div>
+      <label for="userDefaultTZ">Default timezone:</label>
+      <select id="userDefaultTZ" style="padding:6px;"></select>
+    </div>
+    <div>
+      <label for="tzChangeDate">Timezone change date:</label>
+      <input id="tzChangeDate" type="date" />
+      <label for="tzChangeTo">→</label>
+      <select id="tzChangeTo" style="padding:6px;"></select>
+    </div>
+    <div style="margin-left:auto">
+      <button id="exportCsv">Export CSV</button>
+      <button id="copyClip">Copy to clipboard</button>
+      <button id="emailSchedule">Email schedule</button>
+      <button id="submitSchedule">Submit schedule</button>
+    </div>
+  </div>
+  <div id="weeks"></div>
+  <p id="note">Dates limited to 2025-12-01 through 2026-01-31. Shift duration is fixed at 8 hours. Mark "Available" for dates you can cover.</p>
+</div>
+
+<style>
+  .week { border:1px solid #ddd; padding:8px; margin:8px 0; }
+  .weekTitle { font-weight:600; margin-bottom:6px; }
+  /* responsive week/day layout to avoid overlapping inputs */
+  .days { display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:8px; }
+  .day { box-sizing: border-box; border:1px solid #eee; padding:8px; min-width:140px; max-width:260px; display:flex; flex-direction:column; gap:8px; background:#fff; }
+  .day .date { font-weight:600; }
+  .day .controls { display:flex; gap:6px; flex-direction:column; align-items:stretch; }
+  .day .controls > div { display:flex; gap:6px; align-items:center; }
+  .day label { font-size:0.85em; margin-right:6px; white-space:nowrap; }
+  .day select, .day input[type=checkbox] { padding:6px; width:100%; box-sizing:border-box; }
+  .day .limitations { padding:6px; width:100%; box-sizing:border-box; }
+  .info { word-break:break-word; }
+  .info { font-family: monospace; font-size:0.85em; color:#333; }
+  button { padding:6px 10px; }
+  #note { color: #555; }
+
+  @media (max-width: 600px) {
+    .days { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    .day { max-width: 100%; }
+    .day .controls { gap:8px; }
+  }
+</style>
+
+<!-- EmailJS removed: using mailto fallback instead of client-side email service -->
+
+<script>
+(() => {
+  const minDate = '2025-12-01';
+  const maxDate = '2026-01-31';
+
+  // Use Intl.supportedValuesOf if available for full IANA list; otherwise fallback to a curated list
+  const defaultTimezones = [
+    'UTC','America/New_York','America/Chicago','America/Denver','America/Los_Angeles',
+    'Europe/London','Europe/Paris','Asia/Tokyo','Asia/Shanghai','Australia/Sydney'
+  ];
+  const timezonesFull = (typeof Intl.supportedValuesOf === 'function') ? Intl.supportedValuesOf('timeZone') : defaultTimezones;
+  let weeksEl;
+  let userName, userEmail, userDefaultTZ, tzChangeDate, tzChangeTo;
+
+  // wait for DOM ready then render
+  document.addEventListener('DOMContentLoaded', () => {
+  weeksEl = document.getElementById('weeks');
+   // metadata inputs
+  userName = document.getElementById('userName');
+  userEmail = document.getElementById('userEmail');
+   userDefaultTZ = document.getElementById('userDefaultTZ');
+   tzChangeDate = document.getElementById('tzChangeDate');
+   tzChangeTo = document.getElementById('tzChangeTo');
+
+    // populate tz lists for metadata selects (using offset labels, one per unique UTC offset)
+  const tzMetaList = getUniqueTimeZonesByOffset(minDate);
+    tzMetaList.forEach(t => {
+      const label = getTZOffsetLabel(t, minDate);
+      const o=document.createElement('option'); o.value=t; o.text=label; userDefaultTZ.appendChild(o);
+      const o2=document.createElement('option'); o2.value=t; o2.text=label; tzChangeTo.appendChild(o2);
+    });
+    // debug: print first few option texts to console so we can verify labels
+    try {
+      const metaOpts = Array.from(userDefaultTZ.options).slice(0,6).map(o => o.text);
+      console.log('userDefaultTZ first options:', metaOpts);
+    } catch (e) {}
+    // when metadata changes, apply to existing day tiles (but don't overwrite per-day manual choices)
+  userDefaultTZ.addEventListener('change', applyGlobalTZToDays);
+  tzChangeDate.addEventListener('change', applyGlobalTZToDays);
+  tzChangeTo.addEventListener('change', applyGlobalTZToDays);
+
+     document.getElementById('exportCsv').addEventListener('click', () => { downloadCSV(generateCSV()); });
+  document.getElementById('copyClip').addEventListener('click', () => { copyToClipboard(generateCSV()); });
+  document.getElementById('emailSchedule').addEventListener('click', () => { mailtoWithBody(generateCSV()); });
+  document.getElementById('submitSchedule').addEventListener('click', () => { submitSchedule(); });
+    // render the full date range grouped by week
+    renderWeeks();
+  });
+
+  function renderWeeks() {
+    const start = new Date(minDate + 'T00:00:00Z');
+    const end = new Date(maxDate + 'T23:59:59Z');
+    // find start of week (Sunday) for the first week
+    let cur = new Date(start);
+    cur.setUTCDate(cur.getUTCDate() - cur.getUTCDay());
+
+    while (cur <= end) {
+      const weekStart = new Date(cur);
+      const weekEnd = new Date(cur); weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+      const weekDiv = document.createElement('div'); weekDiv.className = 'week';
+      const title = document.createElement('div'); title.className = 'weekTitle';
+      title.textContent = `Week ${weekStart.toISOString().slice(0,10)} — ${weekEnd.toISOString().slice(0,10)}`;
+      weekDiv.appendChild(title);
+      const daysDiv = document.createElement('div'); daysDiv.className = 'days';
+
+      for (let d=0; d<7; d++) {
+        const dayDate = new Date(weekStart);
+        dayDate.setUTCDate(weekStart.getUTCDate() + d);
+        const iso = dayDate.toISOString().slice(0,10);
+        if (iso < minDate || iso > maxDate) {
+          const empty = document.createElement('div'); empty.className='day'; empty.innerHTML = `<div class="date">${iso}</div><div style="color:#999">out of range</div>`;
+          daysDiv.appendChild(empty);
+          continue;
+        }
+
+        const day = document.createElement('div'); day.className = 'day';
+        const dateLabel = document.createElement('div'); dateLabel.className='date'; dateLabel.textContent = iso;
+
+  const controls = document.createElement('div'); controls.className='controls';
+  const chk = document.createElement('input'); chk.type='checkbox'; chk.title='Available'; chk.id = `avail-${iso}`;
+  const chkLabel = document.createElement('label'); chkLabel.htmlFor = chk.id; chkLabel.textContent = 'Available';
+  const startSel = document.createElement('select'); startSel.id = `start-${iso}`;
+  for (let h=0; h<24; h++) { const hh = String(h).padStart(2,'0')+':00'; const o=document.createElement('option'); o.value=hh; o.text=hh; startSel.appendChild(o); }
+  const startLabel = document.createElement('label'); startLabel.htmlFor = startSel.id; startLabel.textContent = 'Start';
+
+  const endSel = document.createElement('select'); endSel.id = `end-${iso}`;
+  for (let h=0; h<24; h++) { const hh = String(h).padStart(2,'0')+':00'; const o=document.createElement('option'); o.value=hh; o.text=hh; endSel.appendChild(o); }
+  const endLabel = document.createElement('label'); endLabel.htmlFor = endSel.id; endLabel.textContent = 'End';
+
+  const tzSel = document.createElement('select'); tzSel.id = `tz-${iso}`;
+  const tzList = getUniqueTimeZonesByOffset(iso);
+  tzList.forEach(t => {
+    const label = getTZOffsetLabel(t, iso);
+    const o=document.createElement('option'); o.value=t; o.text=label; tzSel.appendChild(o);
+  });
+  tzSel.addEventListener('change', () => { tzSel.dataset.tzManual = '1'; });
+  startSel.disabled = true; endSel.disabled = true; tzSel.disabled = true;
+        chk.addEventListener('change', () => {
+          startSel.disabled = !chk.checked; endSel.disabled = !chk.checked; tzSel.disabled = !chk.checked;
+          if (!chk.checked) day.querySelector('.info').textContent='';
+          else updateInfoForDay(iso, startSel.value, endSel.value, tzSel.value, day.querySelector('.info'));
+        });
+        [startSel, endSel, tzSel].forEach(el => el.addEventListener('change', () => { if (chk.checked) updateInfoForDay(iso, startSel.value, endSel.value, tzSel.value, day.querySelector('.info')); }));
+
+        // auto-populate timezone from global default/change if not manually changed
+        const tzValue = computeTZForDate(iso);
+        // only set if it exists in the 7-option list; don't add new options to per-day selects
+        for (let i=0;i<tzSel.options.length;i++) if (tzSel.options[i].value === tzValue) { tzSel.value = tzValue; break; }  const info = document.createElement('div'); info.className='info';
+  const limitInput = document.createElement('input');
+  limitInput.type = 'text';
+  limitInput.className = 'limitations';
+  limitInput.placeholder = 'Limitations (optional)';
+  limitInput.maxLength = 200;
+
+  // assemble controls with labels
+  const chkWrap = document.createElement('div'); chkWrap.style.display='flex'; chkWrap.style.alignItems='center'; chkWrap.style.gap='6px';
+  chkWrap.appendChild(chk); chkWrap.appendChild(chkLabel);
+
+  const startWrap = document.createElement('div'); startWrap.appendChild(startLabel); startWrap.appendChild(startSel);
+  const endWrap = document.createElement('div'); endWrap.appendChild(endLabel); endWrap.appendChild(endSel);
+  const tzLabel = document.createElement('label'); tzLabel.htmlFor = tzSel.id; tzLabel.textContent = 'Timezone';
+  const tzWrap = document.createElement('div'); tzWrap.appendChild(tzLabel); tzWrap.appendChild(tzSel);
+
+  controls.appendChild(chkWrap);
+  controls.appendChild(startWrap);
+  controls.appendChild(endWrap);
+  controls.appendChild(tzWrap);
+
+  day.appendChild(dateLabel);
+  day.appendChild(controls);
+  day.appendChild(limitInput);
+  day.appendChild(info);
+        daysDiv.appendChild(day);
+      }
+
+      weekDiv.appendChild(daysDiv);
+      weeksEl.appendChild(weekDiv);
+
+      cur.setUTCDate(cur.getUTCDate() + 7);
+    }
+  }
+
+  // dateStr: yyyy-mm-dd, startStr/endStr: HH:MM, timeZone: IANA
+  function updateInfoForDay(dateStr, startStr, endStr, timeZone, infoEl) {
+    if (!dateStr || !startStr || !endStr) { infoEl.textContent = ''; return; }
+    try {
+      const startEpoch = wallTimeToEpoch(dateStr, startStr, timeZone);
+      // compute end epoch; if end time is earlier or equal to start, treat as next-day end
+      let endEpoch = wallTimeToEpoch(dateStr, endStr, timeZone);
+      if (endEpoch <= startEpoch) {
+        // add one day (24h) to endEpoch
+        endEpoch += 24*3600*1000;
+      }
+      const startLocalTZ = new Date(startEpoch).toLocaleString(undefined, {timeZone});
+      const endLocalTZ = new Date(endEpoch).toLocaleString(undefined, {timeZone});
+      const startUTC = new Date(startEpoch).toUTCString();
+      const endUTC = new Date(endEpoch).toUTCString();
+      infoEl.textContent = `Start (${timeZone}): ${startLocalTZ} | UTC: ${startUTC} — End (${timeZone}): ${endLocalTZ} | UTC: ${endUTC}`;
+    } catch (e) { infoEl.textContent = 'Invalid date/time'; }
+  }
+
+  function computeTZForDate(dateIso) {
+    // uses global userDefaultTZ and tzChangeDate/tzChangeTo when set
+    try {
+      const def = (userDefaultTZ && userDefaultTZ.value) ? userDefaultTZ.value : 'UTC';
+      const changeDate = (tzChangeDate && tzChangeDate.value) ? tzChangeDate.value : '';
+      const changeTo = (tzChangeTo && tzChangeTo.value) ? tzChangeTo.value : '';
+      if (changeDate && changeTo) {
+        // if dateIso >= changeDate use changeTo
+        if (dateIso >= changeDate) return changeTo;
+      }
+      return def;
+    } catch (e) { return 'UTC'; }
+  }
+
+  function setSelectValueOrAdd(sel, value) {
+    if (!sel) return;
+    for (let i=0;i<sel.options.length;i++) if (sel.options[i].value === value) { sel.value = value; return; }
+    // add option at front
+    const o = document.createElement('option'); o.value = value; o.text = value; sel.insertBefore(o, sel.firstChild);
+    sel.value = value;
+  }
+
+  function getTZOffsetLabel(tz, dateIso) {
+    // compute offset and label for tz on dateIso (e.g., 'EST (GMT-5)')
+    try {
+      const [y, m, d] = dateIso.split('-').map(Number);
+      const dt = new Date(Date.UTC(y, m-1, d, 12, 0, 0)); // noon UTC on the date
+      const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+      // compute offset in hours and return label as IANA (GMT±N)
+      const localFmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      const localParts = localFmt.formatToParts(dt);
+      const get = (type) => Number(localParts.find(p => p.type === type)?.value || 0);
+      const ly = get('year'), lm = get('month'), ld = get('day'), lh = get('hour'), lmin = get('minute'), ls = get('second');
+      const localDt = new Date(Date.UTC(ly, lm-1, ld, lh, lmin, ls));
+      const offsetMs = dt.getTime() - localDt.getTime();
+      const offsetHours = offsetMs / (3600 * 1000);
+  const offsetStr = offsetHours >= 0 ? `GMT+${offsetHours.toFixed(0)}` : `GMT${offsetHours.toFixed(0)}`;
+      // user-friendly names for common US timezones — if the offset matches New York/Chicago,
+      // label it as New York/Chicago even if the representative zone is different (e.g., Bogota)
+      const computeOffsetMs = (zone) => {
+        try {
+          const localFmt2 = new Intl.DateTimeFormat('en-US', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+          const parts2 = localFmt2.formatToParts(dt);
+          const get2 = (type) => Number(parts2.find(p => p.type === type)?.value || 0);
+          const y2 = get2('year'), m2 = get2('month'), d2 = get2('day'), h2 = get2('hour'), min2 = get2('minute'), s2 = get2('second');
+          const localDt2 = new Date(Date.UTC(y2, m2-1, d2, h2, min2, s2));
+          return dt.getTime() - localDt2.getTime();
+        } catch (e) { return null; }
+      };
+      const nyOffset = computeOffsetMs('America/New_York');
+      const chOffset = computeOffsetMs('America/Chicago');
+      let displayName = tz;
+      if (nyOffset !== null && offsetMs === nyOffset) displayName = 'New York';
+      else if (chOffset !== null && offsetMs === chOffset) displayName = 'Chicago';
+      else if (tz === 'America/New_York') displayName = 'New York';
+      else if (tz === 'America/Chicago') displayName = 'Chicago';
+      if (displayName !== tz) console.log('Label override:', tz, '->', displayName, `(${offsetStr})`);
+      return `${displayName} (${offsetStr})`;
+    } catch (e) { return tz; }
+  }
+
+  function getUniqueTimeZonesByOffset(dateIso) {
+    // return deduplicated list of timezones, one per unique UTC offset, sorted by offset
+    const offsetMap = {}; // offset ms -> timezone (representative)
+    timezonesFull.forEach(tz => {
+      try {
+        const [y, m, d] = dateIso.split('-').map(Number);
+        const dt = new Date(Date.UTC(y, m-1, d, 12, 0, 0));
+        const localFmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        const localParts = localFmt.formatToParts(dt);
+        const get = (type) => Number(localParts.find(p => p.type === type)?.value || 0);
+        const ly = get('year'), lm = get('month'), ld = get('day'), lh = get('hour'), lmin = get('minute'), ls = get('second');
+        const localDt = new Date(Date.UTC(ly, lm-1, ld, lh, lmin, ls));
+        const offsetMs = dt.getTime() - localDt.getTime();
+        if (!offsetMap[offsetMs]) offsetMap[offsetMs] = tz;
+      } catch (e) { /* skip zones that fail */ }
+    });
+
+    // return timezones sorted by offset
+    return Object.keys(offsetMap).map(Number).sort((a,b) => a-b).map(offsetMs => offsetMap[offsetMs]);
+  }
+
+  function applyGlobalTZToDays() {
+    document.querySelectorAll('#weeks .day').forEach(d => {
+      const tzSel = d.querySelector('select[id^="tz-"]');
+      if (!tzSel) return;
+      if (tzSel.dataset.tzManual === '1') return; // skip manual overrides
+      const iso = d.querySelector('.date')?.textContent;
+      if (!iso) return;
+      const tzValue = computeTZForDate(iso);
+      setSelectValueOrAdd(tzSel, tzValue);
+      const chk = d.querySelector('input[type=checkbox]');
+      if (chk && chk.checked) {
+        const start = d.querySelector('select[id^="start-"]')?.value;
+        const end = d.querySelector('select[id^="end-"]')?.value;
+        updateInfoForDay(iso, start, end, tzValue, d.querySelector('.info'));
+      }
+    });
+  }
+
+  // Convert wall-clock date/time in a given IANA timezone to epoch ms
+  function wallTimeToEpoch(dateStr, timeStr, timeZone) {
+    // dateStr: yyyy-mm-dd  timeStr: HH:MM
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const [hh, mm] = timeStr.split(':').map(Number);
+
+    // epoch for the same numeric components interpreted as UTC
+    const wallAsUTC = Date.UTC(y, m-1, d, hh, mm, 0);
+
+    // compute offset between timezone and UTC at that instant
+    const dt = new Date(wallAsUTC);
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone, hour12:false, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const parts = fmt.formatToParts(dt);
+    const get = (type) => Number(parts.find(p=>p.type===type).value);
+    const y2 = get('year'), m2 = get('month'), d2 = get('day'), h2 = get('hour'), min2 = get('minute'), s2 = get('second');
+
+    const partsAsUTC = Date.UTC(y2, m2-1, d2, h2, min2, s2);
+    // offset (ms) such that wallAsUTC + offset = epoch of that wall time in UTC
+    const offsetMs = (dt.getTime() - partsAsUTC);
+    return wallAsUTC + offsetMs;
+  }
+
+  function generateCSV() {
+    const rows = [];
+  const header = ['name','email','date','start_local','end_local','start_utc','end_utc','timezone','limitations'];
+    rows.push(header.join(','));
+    document.querySelectorAll('#weeks .day').forEach(d => {
+      const iso = d.querySelector('.date')?.textContent;
+      if (!iso) return;
+      const chk = d.querySelector('input[type=checkbox]');
+      if (!chk || !chk.checked) return;
+      const selects = d.querySelectorAll('select');
+  const start = selects[0].value;
+  const end = selects[1].value;
+  const tz = selects[2].value;
+  const limitations = d.querySelector('.limitations')?.value || '';
+      try {
+        const startEpoch = wallTimeToEpoch(iso, start, tz);
+        let endEpoch = wallTimeToEpoch(iso, end, tz);
+        if (endEpoch <= startEpoch) endEpoch += 24*3600*1000;
+  const startLocal = new Date(startEpoch).toLocaleString('en-CA', {timeZone: tz});
+  const endLocal = new Date(endEpoch).toLocaleString('en-CA', {timeZone: tz});
+  const startUTC = new Date(startEpoch).toUTCString();
+  const endUTC = new Date(endEpoch).toUTCString();
+  const nameVal = (userName && userName.value) ? userName.value : '';
+  const emailVal = (userEmail && userEmail.value) ? userEmail.value : '';
+  rows.push([nameVal, emailVal, iso, startLocal, endLocal, startUTC, endUTC, tz, limitations].map(csvEscape).join(','));
+      } catch(e) { /* skip invalid */ }
+    });
+    return rows.join('\n');
+  }
+
+  function csvEscape(v) {
+    if (v==null) return '';
+    const s = String(v);
+    if (s.includes(',') || s.includes('\"') || s.includes('\n')) return '"'+s.replace(/"/g,'""')+'"';
+    return s;
+  }
+
+  function downloadCSV(text) {
+    const blob = new Blob([text], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'availability.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(()=> alert('Copied schedule CSV to clipboard'))
+        .catch(()=> prompt('Copy the following CSV', text));
+    } else {
+      prompt('Copy the following CSV', text);
+    }
+  }
+
+  function mailtoWithBody(text) {
+    const subject = encodeURIComponent('Availability schedule (8-hour shifts)');
+    const body = encodeURIComponent(text);
+    const href = `mailto:?subject=${subject}&body=${body}`;
+    window.location.href = href;
+  }
+
+  function mailtoWithRecipients(recipients, text) {
+    // recipients: array of email addresses
+  const to = recipients.filter(Boolean).join(',');
+    const subject = encodeURIComponent('Availability schedule (8-hour shifts)');
+    const body = encodeURIComponent(text);
+  const href = `mailto:${to}?subject=${subject}&body=${body}`;
+    window.location.href = href;
+  }
+
+  // submitSchedule: send CSV via EmailJS to flaherty.147@osu.edu and optionally the user's email
+  async function submitSchedule() {
+    // Compose an email using the user's default mail client (mailto)
+    const csv = generateCSV();
+    const name = (document.getElementById('userName')?.value || '').trim();
+    const email = (document.getElementById('userEmail')?.value || '').trim();
+
+    if (!name) {
+      alert('Please enter your name before submitting.');
+      return;
+    }
+
+    // Send CSV to serverless endpoint which will email it as an attachment
+    const payload = { name, email, csv };
+    try {
+      const submitBtn = document.getElementById('submitSchedule');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+      const resp = await fetch('/.netlify/functions/send-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (resp.ok) {
+        alert('Schedule submitted — email sent with CSV attachment.');
+      } else {
+        const txt = await resp.text().catch(()=>null);
+        console.error('submitSchedule server error', resp.status, txt);
+        alert('Error sending schedule via server. Falling back to opening your mail client.');
+        // fallback: open mail client with CSV in body
+        const header = `Name: ${name}\nEmail: ${email || '(not provided)'}\n\n`;
+        mailtoWithRecipients(['flaherty.147@osu.edu'], header + csv);
+      }
+    } catch (err) {
+      console.error('submitSchedule fetch error', err);
+      alert('Network error sending schedule. Opening your email client as fallback.');
+      const header = `Name: ${name}\nEmail: ${email || '(not provided)'}\n\n`;
+      mailtoWithRecipients(['flaherty.147@osu.edu'], header + csv);
+    } finally {
+      const submitBtn2 = document.getElementById('submitSchedule');
+      if (submitBtn2) { submitBtn2.disabled = false; submitBtn2.textContent = 'Submit schedule'; }
+    }
+  }
+
+})();
+</script>
